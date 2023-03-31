@@ -1,0 +1,10 @@
+Main room
+5
+North room
+10
+South room
+20
+East room
+30
+West room
+40
