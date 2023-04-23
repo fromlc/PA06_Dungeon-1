@@ -29,7 +29,9 @@ public:
     // point value for this room
     int points;
 
-    // constructor
+    // constructors
+    DungeonRoom() { }
+
     DungeonRoom(const string& _desc, int _points) : 
         description(_desc), points(_points) {
 
@@ -37,6 +39,9 @@ public:
     }
 
     // destructor #TODO
-    ~DungeonRoom() { }
+    ~DungeonRoom() {
+        if (pNorth != nullptr)
+            delete pNorth;
+    }
 };
 
