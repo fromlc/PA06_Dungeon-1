@@ -21,6 +21,7 @@ using std::string;
 //------------------------------------------------------------------------------
 // constants
 //------------------------------------------------------------------------------
+constexpr int DUNGEON_OK = 0;
 constexpr int FILE_OPEN_ERROR = -5;
 constexpr int FILE_FORMAT_ERROR = -6;
 
@@ -34,9 +35,18 @@ constexpr char GO_AWAY  = 'q';
 // local function prototypes
 //------------------------------------------------------------------------------
 DungeonRoom* getFileRooms(const string& fileName);
-void visitDungeon(DungeonRoom* pMain);
+void visitDungeon();
 DungeonRoom* readFileRoom(ifstream& in);
-bool visitAdjoiningRoom(DungeonRoom*& pRoom, int& points);
+bool visitAdjoiningRoom(DungeonRoom*& pRoom);
+DungeonRoom* getRoomPointer(DungeonRoom* pRoom, char cmd);
+
+//------------------------------------------------------------------------------
+// globals
+//------------------------------------------------------------------------------
+namespace g {
+    int totalPoints = 0;
+    DungeonRoom* pMain = nullptr;
+}
 
 //------------------------------------------------------------------------------
 // entry point
@@ -44,18 +54,18 @@ bool visitAdjoiningRoom(DungeonRoom*& pRoom, int& points);
 int main() {
 
     // create a Dungeon with a central Main room and adjoining rooms
-    DungeonRoom* pMain = getFileRooms("dungeon.txt");
-    visitDungeon(pMain);
+    g::pMain = getFileRooms("dungeon.txt");
+    visitDungeon();
     
-    pMain->deleteDungeon();
-    pMain = nullptr;
+    g::pMain->deleteDungeon();
+    g::pMain = nullptr;
 
     return 0;
 }
 
-//-----------------------------------------------------------
+//------------------------------------------------------------------------------
 // - returns pointer to a new dungeon
-//-----------------------------------------------------------
+//------------------------------------------------------------------------------
 DungeonRoom* getFileRooms(const string& fileName) {
 
     ifstream input(fileName);
@@ -92,10 +102,10 @@ DungeonRoom* getFileRooms(const string& fileName) {
     return pMainRoom;
 }
 
-//-----------------------------------------------------------
+//------------------------------------------------------------------------------
 // - reads room description and points from file (2 lines)
 // - returns pointer to new DungeonRoom with file data 
-//-----------------------------------------------------------
+//------------------------------------------------------------------------------
 DungeonRoom* readFileRoom(ifstream& in) {
 
     string roomName;
@@ -109,59 +119,41 @@ DungeonRoom* readFileRoom(ifstream& in) {
 }
 
 
-//-----------------------------------------------------------
+//------------------------------------------------------------------------------
 // - visits main room and all adjoining rooms
 // - awards room point value
-//-----------------------------------------------------------
-void visitDungeon(DungeonRoom* pRoom) {
+//------------------------------------------------------------------------------
+void visitDungeon() {
 
     // start in the main room
-    cout << "You're in a large room, the " << pRoom->description
-        << ", worth " << pRoom->points << " points.\n";
+    cout << "You're in a large room, the " << g::pMain->description
+        << ", worth " << g::pMain->points << " points.\n";
     cout << "You can go N)orth, S)outh, E)ast, W)est, or Q)uit.\n";
 
-    int points = pRoom->points;
+    // start with point value for main room
+    g::totalPoints = g::pMain->points;
+
+    DungeonRoom* pRoom = g::pMain;
 
     // pRoom is a reference param set to player's current room
-    while (visitAdjoiningRoom(pRoom, points)) { }
-
-    cout << "\nYou scored a total of " << points << " points!\n\n";
+    while (visitAdjoiningRoom(pRoom)) { }
 }
 
-//-----------------------------------------------------------
+//------------------------------------------------------------------------------
 // - visits main room and all adjoining rooms
 // - awards room point value
-//-----------------------------------------------------------
-bool visitAdjoiningRoom(DungeonRoom*& pRoom, int& points) {
-    DungeonRoom* p = pRoom;
-    string direction;
+// - always returns true since getRoomPointer() handles quit command 
+//------------------------------------------------------------------------------
+bool visitAdjoiningRoom(DungeonRoom*& pRoom) {
 
+    DungeonRoom* p = pRoom;
+
+    string direction;
     cout << "\nWhich way? ";
     if (getline(cin, direction)) {
 
-        // get first character of user input
-        char cd = tolower(direction.at(0));
-
-        if (cd == GO_AWAY) {
-            return false;
-        }
-        if (cd == GO_NORTH) {
-            p = pRoom->pNorth;
-        }
-        else if (cd == GO_SOUTH) {
-            p = pRoom->pSouth;
-        }
-        else if (cd == GO_EAST) {
-            p = pRoom->pEast;
-        }
-        else if (cd == GO_WEST) {
-            p = pRoom->pWest;
-        }
-        else {
-            // staying in the same room
-            cout << "You can go N)orth, S)outh, E)ast, W)est, or Q)uit.\n";
-            return true;
-        }
+        // command is first character of user input
+        p = getRoomPointer(pRoom, tolower(direction.at(0)));
 
         // pointer set, ready to visit room
         if (!p) {
@@ -171,8 +163,9 @@ bool visitAdjoiningRoom(DungeonRoom*& pRoom, int& points) {
             cout << "You're in the " << p->description 
                 << ", worth " << p->points << " points.\n";
 
-            // set reference params
-            points += p->points;
+            g::totalPoints += p->points;
+
+            // set reference param
             pRoom = p;
         }
     }
@@ -180,4 +173,38 @@ bool visitAdjoiningRoom(DungeonRoom*& pRoom, int& points) {
     return true;
 }
 
+//------------------------------------------------------------------------------
+// - visits main room and all adjoining rooms
+// - awards room point value
+// - exits app on quit command
+//------------------------------------------------------------------------------
+DungeonRoom* getRoomPointer(DungeonRoom* pRoom, char cmd) {
 
+    DungeonRoom* p = nullptr;
+
+    if (cmd == GO_AWAY) {
+        cout << "\nYou scored a total of " 
+            << g::totalPoints << " points!\n\n";
+        exit(DUNGEON_OK);
+    }
+
+    if (cmd == GO_NORTH) {
+        p = pRoom->pNorth;
+    }
+    else if (cmd == GO_SOUTH) {
+        p = pRoom->pSouth;
+    }
+    else if (cmd == GO_EAST) {
+        p = pRoom->pEast;
+    }
+    else if (cmd == GO_WEST) {
+        p = pRoom->pWest;
+    }
+    else {
+        // staying in the same room
+        cout << "You can go N)orth, S)outh, E)ast, W)est, or Q)uit.\n";
+        p = pRoom;
+    }
+
+    return p;
+}
