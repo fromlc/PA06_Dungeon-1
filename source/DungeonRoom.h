@@ -18,7 +18,7 @@ using std::string;
 //------------------------------------------------------------------------------
 class DungeonRoom {
 public:
-    // pointers to other rooms
+    // pointers to adjoining rooms
     DungeonRoom* pNorth;
     DungeonRoom* pSouth;
     DungeonRoom* pEast;
@@ -26,22 +26,32 @@ public:
 
     // text description of this room
     string description;
+
     // point value for this room
     int points;
 
+    //--------------------------------------------------------------------------
     // constructors
-    DungeonRoom() { }
-
-    DungeonRoom(const string& _desc, int _points) : 
+    //--------------------------------------------------------------------------
+    DungeonRoom(const string& _desc, int _points) :
         description(_desc), points(_points) {
 
+        // initialize room pointers
         pNorth = pSouth = pEast = pWest = nullptr;
     }
 
-    // destructor #TODO
-    ~DungeonRoom() {
-        if (pNorth != nullptr)
-            delete pNorth;
+    //--------------------------------------------------------------------------
+    // - assumes the dungeon is one central main room and 4 adjoining rooms
+    // - deletes all 4 pointers in main dungeon room
+    // - deletes the this pointer to main dungeon room
+    // - #TODO use a destructor when implementing an extended map
+    //--------------------------------------------------------------------------
+    void deleteDungeon() {
+        delete pNorth;
+        delete pSouth;
+        delete pEast;
+        delete pWest;
+        delete this;
     }
 };
 
