@@ -21,15 +21,18 @@ using std::string;
 //------------------------------------------------------------------------------
 // constants
 //------------------------------------------------------------------------------
-constexpr int DUNGEON_OK = 0;
-constexpr int FILE_OPEN_ERROR = -5;
-constexpr int FILE_FORMAT_ERROR = -6;
-
-constexpr char GO_NORTH = 'n';
-constexpr char GO_SOUTH = 's';
-constexpr char GO_EAST  = 'e';
-constexpr char GO_WEST  = 'w';
-constexpr char GO_AWAY  = 'q';
+// error conditions
+static constexpr int DUNGEON_OK = 0;
+static constexpr int FILE_OPEN_ERROR = -5;
+static constexpr int FILE_FORMAT_ERROR = -6;
+// direction commands
+static constexpr char GO_NORTH = 'n';
+static constexpr char GO_SOUTH = 's';
+static constexpr char GO_EAST  = 'e';
+static constexpr char GO_WEST  = 'w';
+static constexpr char GO_AWAY  = 'q';
+// istream two lines per room: 1) description text, 2) int points
+static const string FROM_FILE = "dungeon.txt";
 
 //------------------------------------------------------------------------------
 // local function prototypes
@@ -39,12 +42,15 @@ void visitDungeon();
 DungeonRoom* readFileRoom(ifstream& in);
 bool visitAdjoiningRoom(DungeonRoom*& pRoom);
 DungeonRoom* getRoomPointer(DungeonRoom* pRoom, char cmd);
+inline void attachRoom(ifstream& input, DungeonRoom* pMainRoom);
 
 //------------------------------------------------------------------------------
 // globals
 //------------------------------------------------------------------------------
 namespace g {
+    // accumulated player points
     int totalPoints = 0;
+    // preserve main room address
     DungeonRoom* pMain = nullptr;
 }
 
@@ -54,7 +60,7 @@ namespace g {
 int main() {
 
     // create a Dungeon with a central Main room and adjoining rooms
-    g::pMain = getFileRooms("dungeon.txt");
+    g::pMain = getFileRooms(FROM_FILE);
     visitDungeon();
     
     g::pMain->deleteDungeon();
@@ -64,6 +70,7 @@ int main() {
 }
 
 //------------------------------------------------------------------------------
+// - loops to read room data from text file
 // - returns pointer to a new dungeon
 //------------------------------------------------------------------------------
 DungeonRoom* getFileRooms(const string& fileName) {
@@ -83,7 +90,19 @@ DungeonRoom* getFileRooms(const string& fileName) {
         exit(FILE_FORMAT_ERROR);
     }
 
-    // set pointers for return
+    attachRoom(input, pMainRoom);
+    input.close();
+
+    return pMainRoom;
+}
+
+//------------------------------------------------------------------------------
+// - reads room data for all cardinal directions from text file
+// - doubly links new rooms to passed room
+// - no failure check, after file format error all pointers to nullptr
+//------------------------------------------------------------------------------
+inline void attachRoom(ifstream& input, DungeonRoom* pMainRoom) {
+
     pMainRoom->pNorth = readFileRoom(input);
     pMainRoom->pNorth->pSouth = pMainRoom;
 
@@ -95,11 +114,6 @@ DungeonRoom* getFileRooms(const string& fileName) {
 
     pMainRoom->pWest = readFileRoom(input);
     pMainRoom->pWest->pEast = pMainRoom;
-
-    // done with file
-    input.close();
-
-    return pMainRoom;
 }
 
 //------------------------------------------------------------------------------
@@ -111,10 +125,12 @@ DungeonRoom* readFileRoom(ifstream& in) {
     string roomName;
     string roomPoints;
 
+    // #TODO ignoring getline() exceptions
     if (!getline(in, roomName) || !getline(in, roomPoints)) {
         return nullptr;
     }
 
+    // #TODO ignoring stoi() exceptions
     return new DungeonRoom(roomName, stoi(roomPoints));
 }
 
